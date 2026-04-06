@@ -1,0 +1,24 @@
+{ 
+    "_comentario": "este es solo un archivo de ejemplo",
+    "zonas": [
+        {
+            "id": 1,
+            "nombre": "Zona A",
+            "latitud": 40.7128,
+            "longitud": -74.0060
+        },
+        {
+            "id": 2,
+            "nombre": "Zona B",
+            "latitud": 34.0522,
+            "longitud": -118.2437
+        },
+        {
+            "id": 3,
+            "nombre": "Zona C",
+            "latitud": 41.8781,
+            "longitud": -87.6298
+        }
+    ]
+    
+}
