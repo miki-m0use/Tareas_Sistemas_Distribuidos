@@ -1,7 +1,7 @@
 
 import polars as pl
 import time
-import bounding_boxes as bbox
+import generador_respuestas.bounding_boxes as bbox
 
 #cargamos el dataset de los edificios
 dataset = pl.read_csv('./967_buildings/967_buildings.csv')
@@ -129,4 +129,5 @@ def q5_confidence_dist(zone_id, bins=5):
 
 
 
-print(q3_density('Zona_1', 0.5) )
+print(q1_count('Zona_1', 0.5))
+print(q4_compare('Zona_1', 'Zona_2', 0.5))                               
