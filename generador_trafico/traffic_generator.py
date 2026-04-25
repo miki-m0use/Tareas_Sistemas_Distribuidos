@@ -53,7 +53,22 @@ def generar_consulta(modo="uniforme"):
     # Generamos un confidence aleatorio entre 0 y 1
     confidence = round(random.uniform(0, 1), 2)
 
-    # Retornamos la consulta con sus especificaciones
+    # Caso especial: Q4 necesita dos zonas distintas
+    if query == "Q4":
+        zona_b = elegir_zona(modo)
+
+        # aseguramos que no sean iguales
+        while zona_b == zona:
+            zona_b = elegir_zona(modo)
+
+        return {
+            "query": query,
+            "zona_a": zona,
+            "zona_b": zona_b,
+            "confidence": confidence
+        }
+
+    # resto de queries
     return {
         "query": query,
         "zona": zona,

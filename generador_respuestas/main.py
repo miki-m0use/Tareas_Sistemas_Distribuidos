@@ -30,30 +30,38 @@ def q1_count(zone_id, confidence_min = 0.0):
     return contando
 
 
-#CONSULTA 2: Area total y promedio de los edificios de una zona
-def q2_area(zone_id, confidence_min = 0.0):
-    
+# CONSULTA 2: Área total y promedio de los edificios de una zona
+def q2_area(zone_id, confidence_min=0.0):
+
     time.sleep(0.5)
 
     zona = bbox.zonas[zone_id]
 
-    filtro = (  
-        (dataset['latitude']>= zona['lat'][0]) & (dataset['latitude'] <= zona['lat'][1]) &
-        (dataset['longitude']>= zona['lon'][0]) & (dataset['longitude'] <= zona['lon'][1]) &
-        ( dataset['confidence'] >= confidence_min)
+    filtro = (
+        (dataset['latitude'] >= zona['lat'][0]) & (dataset['latitude'] <= zona['lat'][1]) &
+        (dataset['longitude'] >= zona['lon'][0]) & (dataset['longitude'] <= zona['lon'][1]) &
+        (dataset['confidence'] >= confidence_min)
     )
 
     filtrado = dataset.filter(filtro)
 
-    area_total= 0
-    area = filtrado['area_in_meters']
+    n = filtrado.height
 
-    for i in range(filtrado.height):
-        area_total += float(area[i])
-        promedio_area = area_total / filtrado.height
+    if n == 0:
+        return {
+            "n": 0,
+            "total_area": 0,
+            "avg_area": 0
+        }
 
-    return print(f"n: ", filtrado.height, f"Total: ",area_total, f"Promedio: ", promedio_area)
+    area_total = float(filtrado["area_in_meters"].sum())
+    promedio_area = area_total / n
 
+    return {
+        "n": n,
+        "total_area": area_total,
+        "avg_area": promedio_area
+    }
 
 
 #CONSULTA 3: Densidad de edificions por km^2
@@ -129,5 +137,5 @@ def q5_confidence_dist(zone_id, bins=5):
 
 
 
-print(q1_count('Zona_1', 0.5))
-print(q4_compare('Zona_1', 'Zona_2', 0.5))                               
+# print(q1_count('Zona_1', 0.5))
+# print(q4_compare('Zona_1', 'Zona_2', 0.5))                               
