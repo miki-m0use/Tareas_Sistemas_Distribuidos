@@ -1,4 +1,3 @@
-
 import polars as pl
 import time
 import generador_respuestas.bounding_boxes as bbox

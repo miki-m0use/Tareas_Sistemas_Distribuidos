@@ -1,0 +1,27 @@
+#texto de ejemplo // borrar despues
+HIT
+latencia
+
+HIT
+latencia
+
+MISS
+latencia
+
+MISS
+latencia
+
+MISS
+latencia
+
+MISS
+latencia
+
+MISS
+latencia
+
+MISS
+latencia
+
+MISS
+latencia
