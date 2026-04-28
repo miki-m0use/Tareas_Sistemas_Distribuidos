@@ -3,7 +3,7 @@ from cache.cache_main import preguntarle_al_cache
 from metricas.metricas import registrar_metrica, calcular_estadisticas
 
 # Aquí se elige el número de consultas a generar
-N = 12
+N = 10
 # IMPORTANTE. Aquí se cambia el modo de tráfico/la distribución (uniforme o zipf)
 # modo_trafico = "uniforme"
 modo_trafico = "zipf"
