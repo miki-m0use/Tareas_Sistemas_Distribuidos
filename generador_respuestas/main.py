@@ -106,9 +106,6 @@ def q4_compare(zone_a, zone_b, confidence_min = 0.0):
 
 
 
-
-
-
 #CONSULTA 5: Distribución de confianza en una zona
 """
 Calcula la distribución del score de confianza de detección en una zona, agrupado en intervalos.
@@ -132,3 +129,25 @@ def q5_confidence_dist(zone_id, bins=5):
     scores = filtrado['confidence']
     
     return np.histogram(scores, bins=bins)
+
+
+
+
+
+
+def procesar_consulta(consulta):
+    
+    q = consulta["query"] 
+    conf = consulta.get("confidence", 0.0)
+    
+    if q == "Q1":
+        return q1_count(consulta["zona"], conf)
+    elif q == "Q2":
+        return q2_area(consulta["zona"], conf)
+    elif q == "Q3":
+        return q3_density(consulta["zona"], conf)
+    elif q == "Q4":
+        return q4_compare(consulta["zona_a"], consulta["zona_b"], conf)
+    elif q == "Q5":
+        return q5_confidence_dist(consulta["zona"], consulta["bins"])
+    
