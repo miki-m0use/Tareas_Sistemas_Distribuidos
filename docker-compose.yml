@@ -14,3 +14,5 @@ services:
       - redis
     environment:
       - PYTHONUNBUFFERED=1
+    volumes:
+      - ./967_buildings:/app/967_buildings

@@ -14,3 +14,4 @@ __pycache__/
 .gitignore
 
 # Ignorar cualquier otra cosa pesada que no sea código o tu dataset de 967_buildingsJ
+967_buildings/
