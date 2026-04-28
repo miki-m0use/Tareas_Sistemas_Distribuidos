@@ -14,4 +14,4 @@ COPY . .
 ENV PYTHONPATH=/app
 
 # El comando que arranca el sistema
-CMD ["python", "generador_trafico/main_trafico.py"]
+CMD ["python", "-m", "generador_trafico.main_trafico"]

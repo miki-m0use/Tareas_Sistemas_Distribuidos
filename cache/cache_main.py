@@ -4,7 +4,7 @@ import time
 
 from metricas.metricas import registrar_metrica
 from generador_respuestas.main import procesar_consulta 
-r = redis.Redis(host='redis', port=6379, db=0) 
+r = redis.Redis(host="redis", port=6379, db=0, decode_responses=True)
 
 TTL = 60
 
