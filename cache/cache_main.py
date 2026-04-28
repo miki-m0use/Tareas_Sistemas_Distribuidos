@@ -2,10 +2,9 @@ import redis
 import json
 import time
 
-from metricas.metricas import registrar_metrica 
-from generador_respuestas.main import q1_count, q2_area, q3_density, q4_compare, q5_confidence_dist
-from generador_trafico.main import ejecutar_consulta as calcular_consulta # me di cuenta hiciste una wea parecida pompom, asi que lo estoy probando
-
+from metricas.metricas import registrar_metrica
+from generador_respuestas.main import procesar_consulta 
+from generador_trafico.main_trafico import generar_consulta
 r = redis.Redis(host='localhost', port=6379, db=0) 
 
 TTL = 60
@@ -43,9 +42,9 @@ def obtener_key(consulta):
 
 
 
-def resolver_consulta(consulta):
+def preguntarle_al_cache(consulta):
 
-    key = cache_key(consulta)
+    key = obtener_key(consulta)
     inicio = time.time()
 
     cached = r.get(key)
@@ -54,7 +53,8 @@ def resolver_consulta(consulta):
         resultado = json.loads(cached)# esto retorna los datos que estan en el cache, se pone json.loads 
         #para que se convierta en diccionario, que es un tipo de dato que podemos usar facilement
         latencia = time.time() - inicio
-        return resultado, "HIT", latencia
+        registrar_metrica("HIT", latencia)
+        return "HIT --", latencia
 
     else: #cache MISS
         #como no esta en cache hay que enviarla al generador de respuestas y luego ingresarla al cache
@@ -66,7 +66,11 @@ def resolver_consulta(consulta):
         r.setex(key, TTL, json.dumps(resultado))
 
         #ahora guardamos en metricas el miss y la latencia
+        latencia = time.time() - inicio
         registrar_metrica("MISS", latencia)
+
+        return "MISS --", latencia
+
         
         
 

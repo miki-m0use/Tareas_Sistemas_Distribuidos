@@ -34,7 +34,7 @@ def elegir_query():
     return random.choice(queries)
 
 
-def generar_consulta(modo="uniforme"):
+def generar_consulta(modo):
     """
     Genera una consulta completa simulando una petición de usuario.
 
