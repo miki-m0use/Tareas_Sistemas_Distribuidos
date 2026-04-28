@@ -9,6 +9,22 @@ dataset = pl.read_csv('./967_buildings/967_buildings.csv')
 #las zonas estan definida en otro archivo
 # por lo tanto ahora queda solo mostar las consultas de ejemplo
 
+def filtrar_por_zona(zone_id, confidence_min=0.0):
+    """
+    Filtra el dataset según la zona geográfica y la confianza mínima (se usará en Q5).
+    """
+    zona = bbox.zonas[zone_id]
+
+    filtro = (
+        (dataset["latitude"] >= zona["lat"][0]) &
+        (dataset["latitude"] <= zona["lat"][1]) &
+        (dataset["longitude"] >= zona["lon"][0]) &
+        (dataset["longitude"] <= zona["lon"][1]) &
+        (dataset["confidence"] >= confidence_min)
+    )
+
+    return dataset.filter(filtro)
+
 #CONSULTA 1: Conteo de edificios de una zona
 def q1_count(zone_id, confidence_min = 0.0):
     """
@@ -113,26 +129,79 @@ Permite evaluar la calidad del dato geoespacial antes de tomar decisiones operat
 Parámetros: bbox, número de intervalos bins (por defecto 5)
 """
 
-# CONSULTA 5: Distribución de confianza en una zona
 def q5_confidence_dist(zone_id, bins=5):
-    time.sleep(0.5) # Simulación de tiempo real [cite: 40]
-    
-    zona = bbox.zonas[zone_id]
-    
-    # Filtramos por zona (sin filtrar por confianza mínima, ya que queremos ver la distribución total)
-    filtro = (  
-        (dataset['latitude'] >= zona['lat'][0]) & (dataset['latitude'] <= zona['lat'][1]) &
-        (dataset['longitude'] >= zona['lon'][0]) & (dataset['longitude'] <= zona['lon'][1])
-    )
-    
-    filtrado = dataset.filter(filtro)
-    scores = filtrado['confidence']
-    
-    return np.histogram(scores, bins=bins)
+    """
+    Q5: Distribución del score de confianza en una zona.
 
+    Lo que hace esta función es:
+    -Tomar todos los valores de 'confidence' de los edificios en una zona
+    -Dividir el rango [0, 1] en 'bins' intervalos iguales
+    -Contar cuántos valores caen dentro de cada intervalo
+    
+    O sea construir un histograma de la variable 'confidence'.
 
+    Traducción ultra simple: dividir el rango 0-1, meter los datos en cajitas, contar cuántos hay en cada cajita.
+    """
 
+    # Simula tiempo de procesamiento
+    time.sleep(0.5)
 
+    # Filtrar el dataset para quedarse solo con los edificios de la zona
+    # IMPORTANTE: no se filtra por confidence mínima porque la idea es ver la distribución completa
+    filtrado = filtrar_por_zona(zone_id, confidence_min=0.0)
+
+    # Si no hay edificios en esa zona, no hay nada que analizar
+    # Entonces se retorna un diccionario vacío
+    if filtrado.height == 0:
+        return {}
+
+    # Extraer la columna 'confidence' como lista de Python
+    # Ejemplo: [0.12, 0.45, 0.9, 0.33, ...]
+    scores = filtrado["confidence"].to_list()
+
+    # Crear los límites de los intervalos (bins)
+    # Si bins = 5, se divide [0,1] en 5 partes iguales, o sea:
+    # [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+    intervalos = [i / bins for i in range(bins + 1)]
+
+    # Aquí se guarda el resultado final
+    # De esta manera:
+    # {
+    #   "0.0-0.2": 10,
+    #   "0.2-0.4": 25,
+    #   ...
+    # }
+    distribucion = {}
+
+    # Recorrer cada intervalo
+    # Si bins = 5, pues hay 5 intervalos :p
+    for i in range(bins):
+
+        # Límite inferior y superior del intervalo actual
+        lower = intervalos[i]
+        upper = intervalos[i + 1]
+
+        # Contar cuántos valores caen en este intervalo
+
+        # Para todos los intervalos menos el último:
+        # usamos lower <= s < upper
+        # para evitar contar dos veces valores en los bordes
+        if i == bins - 1:
+            # Último intervalo incluye el 1.0 
+            count = sum(1 for s in scores if lower <= s <= upper)
+        else:
+            # Intervalos normales
+            count = sum(1 for s in scores if lower <= s < upper)
+
+        # Hacer una etiqueta para el intervalo
+        # Que se vea tipo: "0.0-0.2"
+        key = f"{round(lower, 2)}-{round(upper, 2)}"
+
+        # Guardar el conteo en el diccionario
+        distribucion[key] = count
+
+    # Retornar el resultado final
+    return distribucion
 
 
 def procesar_consulta(consulta):
@@ -149,5 +218,5 @@ def procesar_consulta(consulta):
     elif q == "Q4":
         return q4_compare(consulta["zona_a"], consulta["zona_b"], conf)
     elif q == "Q5":
-        return q5_confidence_dist(consulta["zona"], consulta["bins"])
+        return q5_confidence_dist(consulta["zona"], consulta.get("bins", 5))
     

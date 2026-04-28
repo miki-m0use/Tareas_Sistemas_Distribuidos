@@ -2,7 +2,7 @@ import redis
 import json
 import time
 
-from metricas.metricas import registrar_metrica
+from metricas.metricas import registrar_metrica 
 from generador_respuestas.main import q1_count, q2_area, q3_density, q4_compare, q5_confidence_dist
 from generador_trafico.main import ejecutar_consulta as calcular_consulta # me di cuenta hiciste una wea parecida pompom, asi que lo estoy probando
 
