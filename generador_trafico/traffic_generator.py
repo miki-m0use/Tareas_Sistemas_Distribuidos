@@ -50,8 +50,8 @@ def generar_consulta(modo):
     # Elegimos tipo de consulta
     query = elegir_query()
 
-    # Generamos un confidence aleatorio entre 0 y 1
-    confidence = round(random.uniform(0, 1), 2)
+    # Generamos un confidence con pocos valores posibles 
+    confidence = random.choice([0.0, 0.25, 0.5, 0.75])
 
     # Caso especial: Q4 necesita dos zonas distintas
     if query == "Q4":

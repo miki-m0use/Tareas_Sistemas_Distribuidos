@@ -8,6 +8,14 @@ r = redis.Redis(host="redis", port=6379, db=0, decode_responses=True)
 
 TTL = 60
 
+def obtener_evictions():
+    """
+    Obtiene desde Redis la cantidad total de llaves expulsadas por evicción.
+    """
+    info = r.info("stats")
+    return info.get("evicted_keys", 0)
+
+
 """"
 En cache tendremos que hacer las sigueintes cosas:
  - pedir del cache (sacar los datos) 
@@ -52,8 +60,10 @@ def preguntarle_al_cache(consulta):
         resultado = json.loads(cached)# esto retorna los datos que estan en el cache, se pone json.loads 
         #para que se convierta en diccionario, que es un tipo de dato que podemos usar facilement
         latencia = time.time() - inicio
-        registrar_metrica("HIT", latencia)
-        return resultado, "HIT --", latencia
+        evictions_actuales = obtener_evictions()
+        registrar_metrica("HIT", latencia, evictions_actuales)
+
+        return resultado, "HIT", latencia
 
     else: #cache MISS
         #como no esta en cache hay que enviarla al generador de respuestas y luego ingresarla al cache
@@ -66,9 +76,10 @@ def preguntarle_al_cache(consulta):
 
         #ahora guardamos en metricas el miss y la latencia
         latencia = time.time() - inicio
-        registrar_metrica("MISS", latencia)
+        evictions_actuales = obtener_evictions()
+        registrar_metrica("MISS", latencia, evictions_actuales)
 
-        return resultado, "MISS --", latencia
+        return resultado, "MISS", latencia
 
         
         
