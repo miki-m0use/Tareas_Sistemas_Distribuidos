@@ -1,12 +1,12 @@
 from generador_trafico.traffic_generator import generar_consulta 
 from cache.cache_main import preguntarle_al_cache
-from metricas.metricas import registrar_metrica, calcular_estadisticas
+from metricas.metricas import calcular_estadisticas
 
 # Aquí se elige el número de consultas a generar
-N = 5000
+N = 200000
 # IMPORTANTE. Aquí se cambia el modo de tráfico/la distribución (uniforme o zipf)
-# modo_trafico = "uniforme"
-modo_trafico = "zipf"
+modo_trafico = "uniforme"
+#modo_trafico = "zipf"
 
 print(f"GENERADOR DE TRÁFICO - MODO {modo_trafico.upper()}")
 print("-" * 60)

@@ -3,7 +3,7 @@ import numpy as np
 
 # Registro de eventos del sistema
 log_eventos = []
-tiempo_inicio = time.time()
+tiempo_inicio = time.perf_counter()
 
 # Contador de evicciones
 evictions = 0
@@ -48,7 +48,7 @@ def calcular_estadisticas():
     hit_rate = hits / total if total > 0 else 0
     miss_rate = misses / total if total > 0 else 0
 
-    tiempo_total = time.time() - tiempo_inicio
+    tiempo_total = time.perf_counter() - tiempo_inicio
     throughput = total / tiempo_total if tiempo_total > 0 else 0
 
     latencias = [e["latencia"] for e in log_eventos]

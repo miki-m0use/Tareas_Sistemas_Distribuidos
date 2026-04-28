@@ -6,7 +6,7 @@ from metricas.metricas import registrar_metrica
 from generador_respuestas.main import procesar_consulta 
 r = redis.Redis(host="redis", port=6379, db=0, decode_responses=True)
 
-TTL = 60
+TTL = 600
 
 def obtener_evictions():
     """
@@ -52,14 +52,14 @@ def obtener_key(consulta):
 def preguntarle_al_cache(consulta):
 
     key = obtener_key(consulta)
-    inicio = time.time()
+    inicio = time.perf_counter()
 
     cached = r.get(key)
 
     if cached is not None:
         resultado = json.loads(cached)# esto retorna los datos que estan en el cache, se pone json.loads 
         #para que se convierta en diccionario, que es un tipo de dato que podemos usar facilement
-        latencia = time.time() - inicio
+        latencia = time.perf_counter() - inicio
         evictions_actuales = obtener_evictions()
         registrar_metrica("HIT", latencia, evictions_actuales)
 
@@ -75,7 +75,7 @@ def preguntarle_al_cache(consulta):
         r.setex(key, TTL, json.dumps(resultado))
 
         #ahora guardamos en metricas el miss y la latencia
-        latencia = time.time() - inicio
+        latencia = time.perf_counter() - inicio
         evictions_actuales = obtener_evictions()
         registrar_metrica("MISS", latencia, evictions_actuales)
 
