@@ -2,6 +2,7 @@ import redis
 import json
 import time
 
+from generador_respuestas.main import q1_count, q2_area, q3_density, q4_compare, q5_confidence_dist
 from generador_trafico.main import ejecutar_consulta as calcular_consulta # me di cuenta hiciste una wea parecida pompom, asi que lo estoy probando
 
 r = redis.Redis(host='localhost', port=6379, db=0) 
@@ -19,30 +20,25 @@ En cache tendremos que hacer las sigueintes cosas:
 """
 
 
-def cache_key(consulta):
+def obtener_key(consulta):
 
     """
     Obtiene la clave de cache para una consulta específica.
     """
-    #q = consulta["query"]  # esto sirve para obtener la consulta de la peticion
-    #conf = consulta.get("confidence", 0.0) # esto sirve para obtener la confianza de la peticion, como diccionario, "confidence" es la clave y 0.0 es su valor por defecto
-    
-    #lo mismo con las siguientes claves "Q_n" es la clave de la consulta
-    # "zona", "confidence", "zona_a", "zona_b", "bins" son las claves de los otros diccionarios que 
+    q = consulta["query"]  # esto sirve para obtener la consulta de la peticion
+    conf = consulta.get("confidence", 0.0) # esto sirve para obtener la confianza de la peticion, como diccionario, "confidence" es la clave y 0.0 es su valor por defecto
 
-    return calcular_consulta(consulta)
-
-    # if q == "Q1":
-    #     return f"count: {consulta['zona']}:conf={consulta['confidence']}"
-    # elif q == "Q2":
-    #     return f"area:{consulta['zona']}:conf={consulta['confidence']}"
-    # elif q == "Q3":
-    #     return f"density:{consulta['zona']}:conf={consulta['confidence']}"
-    # elif q == "Q4":
-    #     return f"compare:density:{consulta['zona_a']}:{consulta['zona_b']}:conf={consulta['confidence']}"
-    # elif q == "Q5":
-    #     bins = consulta.get("bins", 5)
-    #     return f"confidence_dist:{consulta['zona']}:bins={bins}"
+    if q == "Q1":
+        return f"count: {consulta['zona']}:conf={consulta['confidence']}"
+    elif q == "Q2":
+        return f"area:{consulta['zona']}:conf={consulta['confidence']}"
+    elif q == "Q3":
+        return f"density:{consulta['zona']}:conf={consulta['confidence']}"
+    elif q == "Q4":
+        return f"compare:density:{consulta['zona_a']}:{consulta['zona_b']}:conf={consulta['confidence']}"
+    elif q == "Q5":
+        bins = consulta.get("bins", 5)
+        return f"confidence_dist:{consulta['zona']}:bins={bins}"
 
 def resolver_consulta(consulta):
 

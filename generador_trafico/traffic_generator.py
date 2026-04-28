@@ -74,3 +74,4 @@ def generar_consulta(modo="uniforme"):
         "zona": zona,
         "confidence": confidence
     }
+

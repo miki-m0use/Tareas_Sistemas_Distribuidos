@@ -131,10 +131,4 @@ def q5_confidence_dist(zone_id, bins=5):
     filtrado = dataset.filter(filtro)
     scores = filtrado['confidence']
     
-    return 
-
-
-
-
-# print(q1_count('Zona_1', 0.5))
-# print(q4_compare('Zona_1', 'Zona_2', 0.5))                               
+    return np.histogram(scores, bins=bins)
