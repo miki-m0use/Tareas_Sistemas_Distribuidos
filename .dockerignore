@@ -1,0 +1,16 @@
+# Ignorar entornos virtuales
+venv/
+env/
+.venv/
+
+# Ignorar cachés de Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignorar archivos de Git
+.git/
+.gitignore
+
+# Ignorar cualquier otra cosa pesada que no sea código o tu dataset de 967_buildingsJ

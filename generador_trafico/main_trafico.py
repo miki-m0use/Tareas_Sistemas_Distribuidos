@@ -1,6 +1,6 @@
 from generador_trafico.traffic_generator import generar_consulta 
 from cache.cache_main import preguntarle_al_cache
-from metricas.metricas import registrar_metrica
+from metricas.metricas import registrar_metrica, calcular_estadisticas
 
 # Aquí se elige el número de consultas a generar
 N = 100
@@ -18,8 +18,19 @@ for i in range(N):
 
     print(f"Consulta {i + 1}")
     print("Consulta generada:", consulta)
-    print("Cache:", respuesta["cache"])
-    print("Key:", respuesta["key"])
-    print("Resultado:", respuesta["resultado"])
+    print("Estado Cache:", estado_cache)
+    print("Latencia:", round(latencia, 4), "segundos")
+    print("Resultado matemático:", respuesta)
     print("-" * 60)
+
+
+print("\n" + "=" * 40)
+print("MÉTRICAS FINALES DE LA SIMULACIÓN")
+print("=" * 40)
+estadisticas = calcular_estadisticas()
+if isinstance(estadisticas, dict):
+    for clave, valor in estadisticas.items():
+        print(f"{clave}: {valor}")
+else:
+    print(estadisticas)
 

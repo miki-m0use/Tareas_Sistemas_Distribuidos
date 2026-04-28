@@ -4,8 +4,7 @@ import time
 
 from metricas.metricas import registrar_metrica
 from generador_respuestas.main import procesar_consulta 
-from generador_trafico.main_trafico import generar_consulta
-r = redis.Redis(host='localhost', port=6379, db=0) 
+r = redis.Redis(host='redis', port=6379, db=0) 
 
 TTL = 60
 
@@ -54,7 +53,7 @@ def preguntarle_al_cache(consulta):
         #para que se convierta en diccionario, que es un tipo de dato que podemos usar facilement
         latencia = time.time() - inicio
         registrar_metrica("HIT", latencia)
-        return "HIT --", latencia
+        return resultado, "HIT --", latencia
 
     else: #cache MISS
         #como no esta en cache hay que enviarla al generador de respuestas y luego ingresarla al cache
@@ -69,7 +68,7 @@ def preguntarle_al_cache(consulta):
         latencia = time.time() - inicio
         registrar_metrica("MISS", latencia)
 
-        return "MISS --", latencia
+        return resultado, "MISS --", latencia
 
         
         

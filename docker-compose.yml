@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   redis:
     image: redis:7
@@ -5,3 +7,10 @@ services:
       - "6379:6379"
     command: >
       redis-server --maxmemory 50mb --maxmemory-policy allkeys-lru
+
+  app_python:
+    build: .
+    depends_on:
+      - redis
+    environment:
+      - PYTHONUNBUFFERED=1
