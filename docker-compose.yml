@@ -6,7 +6,7 @@ services:
     ports:
       - "6379:6379"
     command: >
-      redis-server --maxmemory 50mb --maxmemory-policy allkeys-lfu
+      redis-server --maxmemory 1200kb --maxmemory-policy allkeys-lru
 
   app_python:
     build: .
