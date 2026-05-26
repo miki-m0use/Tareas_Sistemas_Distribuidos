@@ -6,7 +6,7 @@ from metricas.metricas import registrar_metrica
 from generador_respuestas.main import procesar_consulta 
 r = redis.Redis(host="redis", port=6379, db=0, decode_responses=True)
 
-TTL = 600
+TTL = 300
 
 def obtener_evictions():
     """
@@ -36,7 +36,7 @@ def obtener_key(consulta):
     conf = consulta.get("confidence", 0.0) # esto sirve para obtener la confianza de la peticion, como diccionario, "confidence" es la clave y 0.0 es su valor por defecto
 
     if q == "Q1":
-        return f"count: {consulta['zona']}:conf={consulta['confidence']}"
+        return f"count:{consulta['zona']}:conf={consulta['confidence']}"
     elif q == "Q2":
         return f"area:{consulta['zona']}:conf={consulta['confidence']}"
     elif q == "Q3":
