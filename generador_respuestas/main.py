@@ -2,6 +2,11 @@ import polars as pl
 import time
 import generador_respuestas.bounding_boxes as bbox
 
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+
+app = FastAPI()
+
 #cargamos el dataset de los edificios
 dataset = pl.read_csv('./967_buildings/967_buildings.csv')
 #print(dataset.head())
@@ -219,4 +224,35 @@ def procesar_consulta(consulta):
         return q4_compare(consulta["zona_a"], consulta["zona_b"], conf)
     elif q == "Q5":
         return q5_confidence_dist(consulta["zona"], consulta.get("bins", 5))
+
+
+@app.post("/procesar")
+def api_procesar_post(consulta: dict):
+    """ Atiende las peticiones POST estructuradas en formato JSON provenientes del Worker """
+    try:
+        resultado = procesar_consulta(consulta)
+        return {"status": "success", "result": resultado}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/procesar")
+def api_procesar_get(query: str, zona: str, confidence: float = 0.0, bins: int = 5, zona_a: str = None, zona_b: str = None):
+    """ 
+    NUEVO: Atiende peticiones GET desde el navegador o herramientas de red.
+    como por ejemplo : http://localhost:8000/procesar?query=Q1&zona=Zona_1&confidence=0.5
+    """
+    try:
+        # Reconstruimos el diccionario de la consulta a partir de los parámetros de la URL
+        consulta = {
+            "query": query,
+            "zona": zona,
+            "confidence": confidence,
+            "bins": bins,
+            "zona_a": zona_a,
+            "zona_b": zona_b
+        }
+        resultado = procesar_consulta(consulta)
+        return {"status": "success", "result": resultado}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
     
