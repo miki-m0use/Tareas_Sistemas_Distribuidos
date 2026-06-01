@@ -7,6 +7,10 @@ from pydantic import BaseModel
 
 app = FastAPI()
 
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
 #cargamos el dataset de los edificios
 dataset = pl.read_csv('./967_buildings/967_buildings.csv')
 #print(dataset.head())
