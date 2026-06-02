@@ -27,9 +27,7 @@ MAX_REINTENTOS = 2
 # Tiempo que una respuesta queda guardada en Redis antes de expirar.
 TTL = 300
 
-# Probabilidad de fallo artificial.
-# Con 0.1 significa que aprox. el 10% de las consultas fallarán a propósito.
-FAILURE_RATE = 0.0
+
 
 # URL del servicio FastAPI del generador de respuestas.
 # Este worker llamará a esta URL cuando tenga un cache MISS.
@@ -196,14 +194,7 @@ def mandar_a_dlq(payload, motivo="max reintentos alcanzado"):
     print(f"  ✗ Consulta {payload['id']} → DLQ ({motivo})")
 
 
-def simular_fallo():
-    """
-    Simula un fallo aleatorio.
 
-    Esto es útil para probar que el sistema de reintentos realmente funciona.
-    """
-
-    return random.random() < FAILURE_RATE
 
 
 # ============================================================
@@ -255,10 +246,7 @@ def procesar_mensaje(payload):
     # Si llegamos aquí, no estaba en caché.
     # Por lo tanto, es cache MISS.
 
-    # Antes de llamar al generador, simulamos fallos aleatorios.
-    # Si falla aquí, se lanza excepción y el loop principal decidirá si va a retry o DLQ.
-    if simular_fallo():
-        raise Exception("Fallo simulado aleatorio")
+
 
     try:
         # Llamada HTTP al generador de respuestas.
@@ -299,7 +287,7 @@ def procesar_mensaje(payload):
 print("=" * 60)
 print("WORKER KAFKA INICIADO")
 print("Suscrito a: consultas-principales, consultas-reintentos")
-print(f"MAX_REINTENTOS: {MAX_REINTENTOS} | FAILURE_RATE: {FAILURE_RATE * 100}%")
+print(f"MAX_REINTENTOS: {MAX_REINTENTOS}")
 print("=" * 60)
 
 mensajes_procesados = 0
@@ -321,6 +309,12 @@ try:
         msg = consumer.poll(timeout=1.0)
 
         if msg is None:
+            # Si la cola se vació, no llegarán mensajes (msg es None). Si estamos en recuperación,
+            # medimos el backlog para registrar que llegó a 0 y cerrar el cálculo del recovery_time.
+            from metricas.metricas import tiempo_inicio_recuperacion
+            if tiempo_inicio_recuperacion is not None:
+                backlog_actual = obtener_backlog()
+                registrar_backlog(backlog_actual)
             continue
 
         # Revisión de errores del mensaje.
@@ -352,13 +346,22 @@ try:
             print("\nSeñal de cierre recibida. Terminando worker...")
             shutdown = True
             consumer.commit(message=msg)
+            
+            # Antes de apagar, si estábamos midiendo el tiempo de recuperación de la cola,
+            # medimos el backlog final (que ahora será 0 tras el commit) para cerrar la métrica.
+            from metricas.metricas import tiempo_inicio_recuperacion
+            if tiempo_inicio_recuperacion is not None:
+                backlog_actual = obtener_backlog()
+                registrar_backlog(backlog_actual)
             break
 
-        # Medimos el backlog. Si estamos en proceso de recuperación, medimos en cada mensaje
-        # para registrar de forma precisa el momento exacto en que la cola llega a 0.
+        # Medimos el backlog. Querying Kafka offsets (list_topics, committed, get_watermark_offsets)
+        # requiere llamadas de red costosas. Para no enlentecer el worker, medimos cada 50 mensajes
+        # durante la recuperación y cada 200 en funcionamiento normal.
         from metricas.metricas import tiempo_inicio_recuperacion
         contador_backlog += 1
-        if contador_backlog % 100 == 0 or tiempo_inicio_recuperacion is not None:
+        intervalo_backlog = 50 if tiempo_inicio_recuperacion is not None else 200
+        if contador_backlog % intervalo_backlog == 0:
             backlog_actual = obtener_backlog()
             registrar_backlog(backlog_actual)
 
