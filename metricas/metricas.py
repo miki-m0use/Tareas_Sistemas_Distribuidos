@@ -14,7 +14,7 @@ total_reintentos = 0        # consultas enviadas al tópico de reintentos
 total_recuperadas = 0       # consultas que fallaron pero se procesaron exitosamente en reintento
 total_dlq = 0               # consultas enviadas a la DLQ
 log_backlog = []            # registro de backlog a lo largo del tiempo
-tiempo_inicio_falla = None  # momento en que empezó una falla
+tiempo_inicio_recuperacion = None  # momento en que el generador vuelve a responder (inicia drenado de cola)
 recovery_time = None        # tiempo que tardó en vaciarse la cola tras la falla
 
 
@@ -34,7 +34,7 @@ def resetear_metricas():
     total_recuperadas = 0
     total_dlq = 0
     log_backlog = []
-    tiempo_inicio_falla = None
+    tiempo_inicio_recuperacion = None
     recovery_time = None
 
 
@@ -68,23 +68,25 @@ def registrar_dlq():
 
 def registrar_backlog(cantidad):
     """Registra el tamaño del backlog en un momento dado."""
+    global recovery_time, tiempo_inicio_recuperacion
     log_backlog.append({
         "timestamp": time.perf_counter() - tiempo_inicio,
         "backlog": cantidad
     })
+    
+    # Si la falla ya se resolvió y el backlog finalmente llega a 0,
+    # calculamos cuánto tardó en vaciarse la cola desde que se recuperó el generador.
+    if tiempo_inicio_recuperacion is not None and cantidad == 0:
+        recovery_time = time.perf_counter() - tiempo_inicio_recuperacion
+        tiempo_inicio_recuperacion = None  # Reseteamos para que no calcule múltiples veces
 
 
-def registrar_inicio_falla():
-    """Marca el momento en que comienza una falla."""
-    global tiempo_inicio_falla
-    tiempo_inicio_falla = time.perf_counter()
-
-
-def registrar_fin_falla():
-    """Marca el momento en que el sistema se recupera. Calcula recovery time."""
-    global recovery_time
-    if tiempo_inicio_falla is not None:
-        recovery_time = time.perf_counter() - tiempo_inicio_falla
+def registrar_inicio_recuperacion():
+    """Marca el momento en que el generador se recupera y empieza a drenar el backlog."""
+    global tiempo_inicio_recuperacion
+    # Solo registramos el inicio si no hay uno activo.
+    if tiempo_inicio_recuperacion is None:
+        tiempo_inicio_recuperacion = time.perf_counter()
 
 
 # ─────────────────────────────────────────

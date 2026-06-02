@@ -7,7 +7,7 @@ from confluent_kafka import Producer
 from confluent_kafka.admin import AdminClient, NewTopic # Importamos el cliente de administración
 from generador_trafico.traffic_generator import generar_consulta
 
-N = 5000
+N = 25000
 modo_trafico = "zipf"
 
 conf_kafka = {'bootstrap.servers': "kafka:29092"}
@@ -50,7 +50,7 @@ for i in range(N):
     }
     
     # Al pasar la clave 'key=payload["id"]', Kafka le aplica un algoritmo Hash 
-    # para repartir las consultas equitativamente entre las 4 particiones
+    # para repartir las consultas equitativamente entre las 3 particiones
     producer.produce(
         'consultas-principales', 
         key=payload["id"], 
@@ -70,10 +70,16 @@ producer.flush()
 print("-" * 60)
 print("Enviando señal de término (Poison Pill) a los Workers...")
 
-# Enviamos la señal SHUTDOWN a todas las particiones para que los 4 workers se enteren
-for p in range(3):
-    payload_termino = {"consulta_data": {"query": "SHUTDOWN"}}
-    producer.produce('consultas-principales', value=json.dumps(payload_termino), partition=p)
+# Enviamos múltiples señales SHUTDOWN a cada partición.
+# Con redundancia (3 por partición = 9 total) para garantizar que todos los
+# workers reciban la señal sin importar cuántos haya escalados.
+NUM_PARTICIONES = 3
+SHUTDOWNS_POR_PARTICION = 3
+
+for _ in range(SHUTDOWNS_POR_PARTICION):
+    for p in range(NUM_PARTICIONES):
+        payload_termino = {"consulta_data": {"query": "SHUTDOWN"}}
+        producer.produce('consultas-principales', value=json.dumps(payload_termino), partition=p)
 
 producer.flush()
 

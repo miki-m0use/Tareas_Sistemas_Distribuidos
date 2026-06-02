@@ -6,11 +6,13 @@ import redis
 import sys
 import threading
 
+# pyrefly: ignore [missing-import]
 from confluent_kafka import Consumer, Producer, KafkaError, TopicPartition
 from metricas.metricas import (
     registrar_metrica, calcular_estadisticas,
     registrar_reintento, registrar_recuperada,
-    registrar_dlq, registrar_backlog
+    registrar_dlq, registrar_backlog,
+    registrar_inicio_recuperacion
 )
 
 
@@ -20,14 +22,14 @@ from metricas.metricas import (
 
 # Máximo número de veces que una consulta puede reintentarse.
 # Si supera este número, se manda a la DLQ.
-MAX_REINTENTOS = 3
+MAX_REINTENTOS = 2
 
 # Tiempo que una respuesta queda guardada en Redis antes de expirar.
 TTL = 300
 
 # Probabilidad de fallo artificial.
 # Con 0.1 significa que aprox. el 10% de las consultas fallarán a propósito.
-FAILURE_RATE = 0.1
+FAILURE_RATE = 0.0
 
 # URL del servicio FastAPI del generador de respuestas.
 # Este worker llamará a esta URL cuando tenga un cache MISS.
@@ -248,7 +250,7 @@ def procesar_mensaje(payload):
 
         print(f"  ✓ HIT  | {consulta['query']} | latencia: {round(latencia, 4)}s")
 
-        return resultado
+        return resultado, False
 
     # Si llegamos aquí, no estaba en caché.
     # Por lo tanto, es cache MISS.
@@ -287,7 +289,7 @@ def procesar_mensaje(payload):
 
     print(f"  ✓ MISS | {consulta['query']} | latencia: {round(latencia, 4)}s")
 
-    return resultado
+    return resultado, True
 
 
 # ============================================================
@@ -302,6 +304,10 @@ print("=" * 60)
 
 mensajes_procesados = 0
 shutdown = False
+
+# Indica si el sistema está actualmente en un período de fallas.
+# Se activa con el primer fallo y se desactiva cuando se procesa exitosamente.
+en_periodo_falla = False
 
 # Contador para medir el backlog cada cierta cantidad de mensajes.
 # No lo medimos en cada mensaje para no agregar demasiada latencia.
@@ -318,8 +324,10 @@ try:
             continue
 
         # Revisión de errores del mensaje.
+        # UNKNOWN_TOPIC_OR_PART es normal al inicio (los tópicos aún no existen).
+        # _PARTITION_EOF indica que se llegó al final de la partición.
         if msg.error():
-            if msg.error().code() == KafkaError._PARTITION_EOF:
+            if msg.error().code() in (KafkaError._PARTITION_EOF, KafkaError.UNKNOWN_TOPIC_OR_PART):
                 continue
             else:
                 print(f"Error Kafka: {msg.error()}", file=sys.stderr)
@@ -346,19 +354,30 @@ try:
             consumer.commit(message=msg)
             break
 
-        # Cada 100 mensajes medimos cuántos mensajes quedan pendientes en Kafka.
-        # Esto nos da el backlog size en distintos momentos de la simulación.
+        # Medimos el backlog. Si estamos en proceso de recuperación, medimos en cada mensaje
+        # para registrar de forma precisa el momento exacto en que la cola llega a 0.
+        from metricas.metricas import tiempo_inicio_recuperacion
         contador_backlog += 1
-        if contador_backlog % 100 == 0:
+        if contador_backlog % 100 == 0 or tiempo_inicio_recuperacion is not None:
             backlog_actual = obtener_backlog()
             registrar_backlog(backlog_actual)
 
         # Procesamos el mensaje normalmente.
         try:
-            procesar_mensaje(payload)
+            resultado, was_miss = procesar_mensaje(payload)
             mensajes_procesados += 1
 
+            # Si estábamos en período de falla y el generador volvió a contestar (MISS exitoso),
+            # comienza la fase de recuperación de la cola (drenado del backlog).
+            if en_periodo_falla and was_miss:
+                registrar_inicio_recuperacion()
+                en_periodo_falla = False
+                print("  ✓ Generador recuperado. Iniciando vaciado de la cola (backlog)...")
+
         except Exception as e:
+            # Si algo falla, marcamos que el sistema está en falla
+            en_periodo_falla = True
+
             # Si algo falla, revisamos cuántos reintentos lleva.
             retry_count = payload.get("retry_count", 0)
 
