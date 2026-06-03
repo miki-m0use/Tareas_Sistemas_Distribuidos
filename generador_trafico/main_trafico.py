@@ -14,8 +14,8 @@ conf_kafka = {'bootstrap.servers': "kafka:29092"}
 
 admin_client = AdminClient(conf_kafka)
 topicos_a_crear = [
-    NewTopic('consultas-principales', num_partitions=3, replication_factor=1),
-    NewTopic('consultas-reintentos', num_partitions=3, replication_factor=1),
+    NewTopic('consultas-principales', num_partitions=4, replication_factor=1),
+    NewTopic('consultas-reintentos', num_partitions=4, replication_factor=1),
     NewTopic('consultas-dlq', num_partitions=1, replication_factor=1)
 ]
 
@@ -50,7 +50,7 @@ for i in range(N):
     }
     
     # Al pasar la clave 'key=payload["id"]', Kafka le aplica un algoritmo Hash 
-    # para repartir las consultas equitativamente entre las 3 particiones
+    # para repartir las consultas equitativamente entre las 4 particiones
     producer.produce(
         'consultas-principales', 
         key=payload["id"], 
@@ -73,7 +73,7 @@ print("Enviando señal de término (Poison Pill) a los Workers...")
 # Enviamos múltiples señales SHUTDOWN a cada partición.
 # Con redundancia (3 por partición = 9 total) para garantizar que todos los
 # workers reciban la señal sin importar cuántos haya escalados.
-NUM_PARTICIONES = 3
+NUM_PARTICIONES = 4
 SHUTDOWNS_POR_PARTICION = 3
 
 for _ in range(SHUTDOWNS_POR_PARTICION):

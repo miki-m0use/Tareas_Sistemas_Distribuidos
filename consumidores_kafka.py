@@ -8,6 +8,7 @@ import threading
 
 # pyrefly: ignore [missing-import]
 from confluent_kafka import Consumer, Producer, KafkaError, TopicPartition
+from metricas import metricas as metricas_module  # FIX: importar el módulo, no variables sueltas
 from metricas.metricas import (
     registrar_metrica, calcular_estadisticas,
     registrar_reintento, registrar_recuperada,
@@ -20,12 +21,11 @@ from metricas.metricas import (
 # CONFIGURACIÓN GENERAL DEL WORKER
 # ============================================================
 
-# Máximo número de veces que una consulta puede reintentarse.
 # Si supera este número, se manda a la DLQ.
 MAX_REINTENTOS = 2
 
 # Tiempo que una respuesta queda guardada en Redis antes de expirar.
-TTL = 300
+TTL = 128 # es la cantida mas comun que he  visto
 
 
 
@@ -46,20 +46,19 @@ _print_lock = threading.Lock()
 # CONFIGURACIÓN DE KAFKA
 # ============================================================
 
-# Configuración del consumidor Kafka.
 conf_consumer = {
-    # Dirección interna del servicio Kafka en Docker.
+    # Dirección interna del servicio Kafka en Docker
     'bootstrap.servers': 'kafka:29092',
 
     # Todos los consumers con este mismo grupo se reparten los mensajes.
-    # Si levantas 3 workers, Kafka divide la carga entre ellos.
+    # Si levantas 3 workers, Kafka divide la carga entre ellos
     'group.id': 'workers-group',
 
-    # Si no hay offset guardado, empieza desde el mensaje más antiguo.
+    # Si no hay offset guardado, empieza desde el mensaje más antiguo
     'auto.offset.reset': 'earliest',
 
-    # Desactivamos commit automático.
-    # Así confirmamos manualmente cuando ya procesamos un mensaje.
+    # Desactivamos commit automático
+    # Así confirmamos manualmente cuando ya procesamos un mensaje
     'enable.auto.commit': False
 }
 
@@ -156,6 +155,13 @@ def mandar_a_reintento(payload):
 
     payload["retry_count"] += 1
 
+    # FIX: guardamos el timestamp de cuándo se puede procesar este reintento.
+    # El worker esperará hasta ese momento antes de procesarlo, evitando que
+    # el reintento llegue inmediatamente cuando el generador aún está caído.
+    # Delay exponencial: 2^retry_count segundos (intento 1 → 2s, intento 2 → 4s)
+    delay_segundos = 2 ** payload["retry_count"]
+    payload["retry_not_before"] = time.time() + delay_segundos
+
     producer.produce(
         'consultas-reintentos',
         key=payload.get("id", "sin-id"),
@@ -168,7 +174,7 @@ def mandar_a_reintento(payload):
     # Registramos en métricas que hubo un reintento
     registrar_reintento()
 
-    print(f"  ↩ Consulta {payload['id']} → reintentos (intento {payload['retry_count']})")
+    print(f"  ↩ Consulta {payload['id']} → reintentos (intento {payload['retry_count']}, delay {delay_segundos}s)")
 
 
 def mandar_a_dlq(payload, motivo="max reintentos alcanzado"):
@@ -217,6 +223,15 @@ def procesar_mensaje(payload):
 
     consulta = payload["consulta_data"]
     inicio = time.perf_counter()
+
+    # FIX: si el mensaje tiene un delay de reintento, esperamos hasta que sea el momento.
+    # Esto implementa el backoff exponencial real: el worker espera en vez de procesar de inmediato.
+    retry_not_before = payload.get("retry_not_before")
+    if retry_not_before is not None:
+        espera = retry_not_before - time.time()
+        if espera > 0:
+            print(f"  ⏳ Esperando {round(espera, 1)}s antes de reintentar {payload.get('id', '?')}...")
+            time.sleep(espera)
 
     # Revisamos si este mensaje viene del tópico de reintentos.
     # Si retry_count > 0, significa que ya falló al menos una vez antes.
@@ -292,6 +307,7 @@ print("=" * 60)
 
 mensajes_procesados = 0
 shutdown = False
+shutdown_pendiente = False  # FIX: True cuando recibimos SHUTDOWN pero aún hay reintentos pendientes
 
 # Indica si el sistema está actualmente en un período de fallas.
 # Se activa con el primer fallo y se desactiva cuando se procesa exitosamente.
@@ -311,10 +327,18 @@ try:
         if msg is None:
             # Si la cola se vació, no llegarán mensajes (msg es None). Si estamos en recuperación,
             # medimos el backlog para registrar que llegó a 0 y cerrar el cálculo del recovery_time.
-            from metricas.metricas import tiempo_inicio_recuperacion
-            if tiempo_inicio_recuperacion is not None:
+            # FIX: acceder al módulo, no a la variable importada (que siempre sería None)
+            if metricas_module.tiempo_inicio_recuperacion is not None:
                 backlog_actual = obtener_backlog()
                 registrar_backlog(backlog_actual)
+
+            # FIX: si recibimos SHUTDOWN y ya no hay más mensajes (incluido consultas-reintentos),
+            # es seguro apagarse. El timeout de 1s en poll garantiza que esperamos lo suficiente.
+            if shutdown_pendiente:
+                print("Cola de reintentos vaciada. Terminando worker.")
+                shutdown = True
+                break
+
             continue
 
         # Revisión de errores del mensaje.
@@ -343,24 +367,48 @@ try:
         # Poison Pill:
         # mensaje especial para apagar el worker ordenadamente.
         if consulta_data.get("query") == "SHUTDOWN":
-            print("\nSeñal de cierre recibida. Terminando worker...")
-            shutdown = True
+            print("\nSeñal de cierre recibida.")
             consumer.commit(message=msg)
-            
-            # Antes de apagar, si estábamos midiendo el tiempo de recuperación de la cola,
-            # medimos el backlog final (que ahora será 0 tras el commit) para cerrar la métrica.
-            from metricas.metricas import tiempo_inicio_recuperacion
-            if tiempo_inicio_recuperacion is not None:
+
+            # FIX: antes de apagarse, verificamos si quedan mensajes en consultas-reintentos.
+            # Si hay mensajes pendientes ahí, el worker los debe procesar antes de terminar
+            # para que no se pierdan ni queden sin llegar a DLQ.
+            print("Verificando si quedan mensajes en consultas-reintentos...")
+            try:
+                meta = consumer.list_topics(topic='consultas-reintentos', timeout=3)
+                partes = meta.topics['consultas-reintentos'].partitions
+                pendientes_retry = 0
+                for p_id in partes:
+                    tp = TopicPartition('consultas-reintentos', p_id)
+                    low, high = consumer.get_watermark_offsets(tp, timeout=2)
+                    committed = consumer.committed([tp], timeout=2)
+                    offset_actual = committed[0].offset if committed[0].offset >= 0 else low
+                    pendientes_retry += max(0, high - offset_actual)
+            except Exception:
+                pendientes_retry = 0
+
+            if pendientes_retry > 0:
+                print(f"  Hay {pendientes_retry} mensajes en consultas-reintentos. Procesándolos antes de cerrar...")
+                # Seguimos corriendo el loop; shutdown se activará cuando se vacíe
+                # el tópico de reintentos (msg is None por 3 segundos seguidos).
+                shutdown_pendiente = True
+            else:
+                print("Terminando worker (no hay reintentos pendientes).")
+                shutdown = True
+
+            if metricas_module.tiempo_inicio_recuperacion is not None:
                 backlog_actual = obtener_backlog()
                 registrar_backlog(backlog_actual)
-            break
+
+            if shutdown:
+                break
+            continue
 
         # Medimos el backlog. Querying Kafka offsets (list_topics, committed, get_watermark_offsets)
         # requiere llamadas de red costosas. Para no enlentecer el worker, medimos cada 50 mensajes
         # durante la recuperación y cada 200 en funcionamiento normal.
-        from metricas.metricas import tiempo_inicio_recuperacion
         contador_backlog += 1
-        intervalo_backlog = 50 if tiempo_inicio_recuperacion is not None else 200
+        intervalo_backlog = 50 if metricas_module.tiempo_inicio_recuperacion is not None else 200
         if contador_backlog % intervalo_backlog == 0:
             backlog_actual = obtener_backlog()
             registrar_backlog(backlog_actual)

@@ -42,7 +42,7 @@ def q1_count(zone_id, confidence_min = 0.0):
     o si hay que poner un sleep para simular el tiempo de procesamiento, ai que por las dudas ocuparemos un time.sleep()
     #simulamos un tiempo de procesamiento
     """
-    time.sleep(0.05)
+    time.sleep(0.1)
 
     zona = bbox.zonas[zone_id]
     filtrado = (
@@ -58,7 +58,7 @@ def q1_count(zone_id, confidence_min = 0.0):
 # CONSULTA 2: Área total y promedio de los edificios de una zona
 def q2_area(zone_id, confidence_min=0.0):
 
-    time.sleep(0.05)
+    time.sleep(0.1)
 
     zona = bbox.zonas[zone_id]
 
@@ -91,7 +91,7 @@ def q2_area(zone_id, confidence_min=0.0):
 
 #CONSULTA 3: Densidad de edificions por km^2
 def q3_density(zone_id, confidence_min = 0.0):
-    time.sleep(0.05)
+    time.sleep(0.1)
     zona = bbox.zonas[zone_id]
 
     filtro = (  
@@ -154,7 +154,7 @@ def q5_confidence_dist(zone_id, bins=5):
     """
 
     # Simula tiempo de procesamiento
-    time.sleep(0.05)
+    time.sleep(0.1)
 
     # Filtrar el dataset para quedarse solo con los edificios de la zona
     # IMPORTANTE: no se filtra por confidence mínima porque la idea es ver la distribución completa

@@ -25,7 +25,7 @@ recovery_time = None        # tiempo que tardó en vaciarse la cola tras la fall
 def resetear_metricas():
     global log_eventos, tiempo_inicio, evictions
     global total_reintentos, total_recuperadas, total_dlq
-    global log_backlog, tiempo_inicio_falla, recovery_time
+    global log_backlog, tiempo_inicio_recuperacion, recovery_time  # FIX: era tiempo_inicio_falla (no existe)
 
     log_eventos = []
     tiempo_inicio = time.perf_counter()
@@ -34,7 +34,7 @@ def resetear_metricas():
     total_recuperadas = 0
     total_dlq = 0
     log_backlog = []
-    tiempo_inicio_recuperacion = None
+    tiempo_inicio_recuperacion = None  # FIX: ahora sí está declarada en global
     recovery_time = None
 
 
@@ -74,9 +74,11 @@ def registrar_backlog(cantidad):
         "backlog": cantidad
     })
     
-    # Si la falla ya se resolvió y el backlog finalmente llega a 0,
+    # Si la falla ya se resolvió y el backlog finalmente llega a 0 (o casi),
     # calculamos cuánto tardó en vaciarse la cola desde que se recuperó el generador.
-    if tiempo_inicio_recuperacion is not None and cantidad == 0:
+    # FIX: usamos <= 3 en vez de == 0 porque los mensajes SHUTDOWN también cuentan
+    # como pendientes en el offset, por lo que el backlog puede nunca llegar exactamente a 0.
+    if tiempo_inicio_recuperacion is not None and cantidad <= 3:
         recovery_time = time.perf_counter() - tiempo_inicio_recuperacion
         tiempo_inicio_recuperacion = None  # Reseteamos para que no calcule múltiples veces
 
