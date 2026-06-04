@@ -7,15 +7,15 @@ from confluent_kafka import Producer
 from confluent_kafka.admin import AdminClient, NewTopic # Importamos el cliente de administración
 from generador_trafico.traffic_generator import generar_consulta
 
-N = 25000
+N = 5000
 modo_trafico = "zipf"
 
 conf_kafka = {'bootstrap.servers': "kafka:29092"}
 
 admin_client = AdminClient(conf_kafka)
 topicos_a_crear = [
-    NewTopic('consultas-principales', num_partitions=4, replication_factor=1),
-    NewTopic('consultas-reintentos', num_partitions=4, replication_factor=1),
+    NewTopic('consultas-principales', num_partitions=1, replication_factor=1),
+    NewTopic('consultas-reintentos', num_partitions=1, replication_factor=1),
     NewTopic('consultas-dlq', num_partitions=1, replication_factor=1)
 ]
 
@@ -73,7 +73,7 @@ print("Enviando señal de término (Poison Pill) a los Workers...")
 # Enviamos múltiples señales SHUTDOWN a cada partición.
 # Con redundancia (3 por partición = 9 total) para garantizar que todos los
 # workers reciban la señal sin importar cuántos haya escalados.
-NUM_PARTICIONES = 4
+NUM_PARTICIONES = 1
 SHUTDOWNS_POR_PARTICION = 3
 
 for _ in range(SHUTDOWNS_POR_PARTICION):

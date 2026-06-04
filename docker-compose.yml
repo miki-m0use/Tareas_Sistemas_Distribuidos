@@ -42,7 +42,7 @@ services:
     image: redis:7
     ports:
       - "6379:6379"
-    command: redis-server --maxmemory 2mb --maxmemory-policy allkeys-lru
+    command: redis-server --maxmemory 1300kb --maxmemory-policy allkeys-lru
     healthcheck:
       test: [ "CMD", "redis-cli", "ping" ]
       interval: 5s
@@ -84,7 +84,7 @@ services:
 
   generador_trafico:
     build: .
-    command: python -m generador_trafico.main_trafico
+    command: python -m generador_trafico.main_trafico_spike
     volumes:
       - .:/app
     environment:

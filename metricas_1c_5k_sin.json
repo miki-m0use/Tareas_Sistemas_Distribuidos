@@ -1,0 +1,129 @@
+{
+  "stats": {
+    "Total Consultas": 5000,
+    "Hits": 2996,
+    "Misses": 2004,
+    "Hit Rate": 0.5992,
+    "Miss Rate": 0.4008,
+    "Throughput (req/s)": 25.95,
+    "Latencia P50 (s)": 0.000454,
+    "Latencia P95 (s)": 0.116863,
+    "Evictions": 236,
+    "Eviction Rate (evictions/min)": 73.4907,
+    "t_cache promedio (s)": 0.000351,
+    "t_db promedio (s)": 0.081858,
+    "Cache Efficiency": -0.032598,
+    "Total Reintentos": 0,
+    "Total Recuperadas": 0,
+    "Total DLQ": 0,
+    "Retry Rate": 0.0,
+    "Recovery Rate": 0,
+    "DLQ Rate": 0.0,
+    "Backlog Maximo": 4804,
+    "Recovery Time (s)": "N/A"
+  },
+  "log_backlog": [
+    {
+      "timestamp": 23.1745276620004,
+      "backlog": 4804
+    },
+    {
+      "timestamp": 35.729952290001165,
+      "backlog": 4604
+    },
+    {
+      "timestamp": 44.75733748899984,
+      "backlog": 4404
+    },
+    {
+      "timestamp": 54.27607805400112,
+      "backlog": 4204
+    },
+    {
+      "timestamp": 62.296270666000055,
+      "backlog": 4004
+    },
+    {
+      "timestamp": 69.81639641400034,
+      "backlog": 3804
+    },
+    {
+      "timestamp": 76.3350770850011,
+      "backlog": 3604
+    },
+    {
+      "timestamp": 83.35267770000064,
+      "backlog": 3404
+    },
+    {
+      "timestamp": 89.8704961780004,
+      "backlog": 3204
+    },
+    {
+      "timestamp": 95.88333109100131,
+      "backlog": 3004
+    },
+    {
+      "timestamp": 102.40444901800038,
+      "backlog": 2804
+    },
+    {
+      "timestamp": 108.92280727900106,
+      "backlog": 2604
+    },
+    {
+      "timestamp": 114.9367930190001,
+      "backlog": 2404
+    },
+    {
+      "timestamp": 119.9475368580006,
+      "backlog": 2204
+    },
+    {
+      "timestamp": 125.96847369399984,
+      "backlog": 2004
+    },
+    {
+      "timestamp": 132.4894696350002,
+      "backlog": 1804
+    },
+    {
+      "timestamp": 139.01166485400063,
+      "backlog": 1604
+    },
+    {
+      "timestamp": 145.5345376969999,
+      "backlog": 1404
+    },
+    {
+      "timestamp": 152.05186503500045,
+      "backlog": 1204
+    },
+    {
+      "timestamp": 157.56613355300033,
+      "backlog": 1004
+    },
+    {
+      "timestamp": 164.08082163200015,
+      "backlog": 804
+    },
+    {
+      "timestamp": 170.60026749400095,
+      "backlog": 604
+    },
+    {
+      "timestamp": 178.1304792660012,
+      "backlog": 404
+    },
+    {
+      "timestamp": 184.6445305060006,
+      "backlog": 204
+    },
+    {
+      "timestamp": 191.15764857500108,
+      "backlog": 4
+    }
+  ],
+  "spike_inicio_t": null,
+  "spike_fin_t": null
+}

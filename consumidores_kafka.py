@@ -6,6 +6,10 @@ import redis
 import sys
 import threading
 
+import json as _json
+from metricas import metricas as _m
+
+
 # pyrefly: ignore [missing-import]
 from confluent_kafka import Consumer, Producer, KafkaError, TopicPartition
 from metricas import metricas as metricas_module  # FIX: importar el módulo, no variables sueltas
@@ -470,3 +474,31 @@ finally:
             print(estadisticas)
 
         print("=" * 60)
+
+
+
+
+# Nombre del archivo: cámbialo manualmente antes de cada corrida
+# Formato: metricas_{consumers}c_{n_consultas}k_{sin|con}.json
+# Ejemplos:
+#   metricas_1c_5k_sin.json   → 1 consumer, 5000 consultas, sin spike
+#   metricas_3c_15k_con.json  → 3 consumers, 15000 consultas, con spike
+NOMBRE_ARCHIVO = "metricas_2c_5k_con.json"   # ← CAMBIAR ANTES DE CADA CORRIDA
+ 
+_salida = {
+    "stats":          estadisticas,
+    "log_backlog":    _m.log_backlog,
+    # Si se usó main_trafico_spike.py con SPIKE_ACTIVO=True,
+    # poner aquí los segundos aproximados en que empezó y terminó el spike.
+    # Para N=5000, SPIKE_INICIO=1600, SPIKE_FIN=2400:
+    #   spike_inicio_t = 1600 * 0.002 = 3.2
+    #   spike_fin_t    = 2400 * 0.002 = 4.8
+    # Si es prueba SIN spike, dejar estos en None
+    "spike_inicio_t": 40,   # ← pon el valor si es con spike
+    "spike_fin_t":    50,   # ← pon el valor si es con spike
+}
+ 
+with open(NOMBRE_ARCHIVO, "w") as _f:
+    _json.dump(_salida, _f, indent=2)
+ 
+print(f"\nMétricas exportadas → {NOMBRE_ARCHIVO}")
